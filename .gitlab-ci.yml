@@ -1,0 +1,46 @@
+stages:
+  - build
+  - test
+  - deploy
+
+services:
+    - name: docker:dind
+      entrypoint: ["env", "-u", "DOCKER_HOST"]
+      command: ["dockerd-entrypoint.sh"]
+
+variables:
+    DOCKER_HOST: tcp://docker:2375/
+    DOCKER_DRIVER: overlay2
+    DOCKER_TLS_CERTDIR: ""
+
+
+job_build:
+  image: docker:stable
+  stage: build
+  script:
+    - echo "=============== docker build image  ==============="
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker build -t $CI_REGISTRY_IMAGE:0.0.2 .
+    - docker push $CI_REGISTRY_IMAGE:0.0.2
+  only:
+    - mainx
+
+job_test:
+  image: $CI_REGISTRY_IMAGE:0.0.2
+  stage: test
+  script:
+    - echo "=============== app unit test  ==============="
+    - pytest test/cicd.py
+  only:
+    - mainx
+
+job_deploy:
+  image: docker:stable
+  stage: deploy
+  script:
+    - echo "=============== deploy  server ==============="
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker run -itd --name trun -p 20200:8744 $CI_REGISTRY_IMAGE:0.0.2 python server.py
+  only:
+    - mainx
+
