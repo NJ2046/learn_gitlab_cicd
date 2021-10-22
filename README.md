@@ -1,0 +1,2 @@
+# learn_gitlab_cicd
+初次尝试gitlab的持续集成和持续部署
